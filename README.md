@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# The Register of English Faculty — Magadh University
 
-## Getting Started
+A directory of the English faculty across the University Department and the constituent, minority, government and affiliated colleges of Magadh University, Bodh Gaya. It has a public site with search and filters and a password-protected admin panel for corrections.
 
-First, run the development server:
+**Stack:** Next.js 16 (App Router, Cache Components) · MongoDB · Cloudinary · Tailwind CSS 4
+
+## Running it
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # http://localhost:3000
+npm run build && npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Copy `.env.example` to `.env.local` and fill it in:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Purpose |
+|---|---|
+| `DB_URI` | MongoDB connection string |
+| `DB_NAME` | Database name (`english_faculty_database`) |
+| `CLOUDINARY_CLOUD_NAME` / `_API_KEY` / `_API_SECRET` | Portrait storage |
+| `CLOUDINARY_FOLDER` | Folder for portraits (`mu-english/faculty`) |
+| `ADMIN_PASSWORD` | Password for `/admin` |
+| `ADMIN_SESSION_SECRET` | 32+ random characters used to sign the admin cookie |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Data
 
-## Learn More
+- Collections: `colleges` and `faculty` in `english_faculty_database`.
+- `npm run seed` loads `data/seed/colleges.json` and `data/seed/faculty.json`, uploads `data/seed/photos/*` to Cloudinary and upserts by slug, so it is safe to re-run. **Records edited in the admin panel since the last seed are never overwritten** (pass `-- --force` to override). Pass `-- --photos` to force re-uploading the photos. `data/seed/` is gitignored because it holds personal phone numbers.
+- Colleges come from Magadh University's website plus its 2026–30 UG admissions system, which also supplies each college's official code and B.A. English seats (`englishSeats`).
+- Faculty records can carry a public `bio` and a list of `highlights` (distinctions, research record, selected publications).
+- Public pages read through one cached function (`lib/data.ts → getRegister`). Every admin save or delete calls `updateTag("register")`, so changes appear on the site immediately. Edits made directly in MongoDB Compass show up within an hour.
 
-To learn more about Next.js, take a look at the following resources:
+## Admin panel (`/admin`)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Add, edit and delete faculty and colleges. Photos are resized in the browser, uploaded to Cloudinary, and centred on the face automatically.
+- Deleting a faculty member asks for confirmation, removes the photo from Cloudinary first, and only then deletes the record. If Cloudinary fails, the record is kept so no image is orphaned. Replacing a photo deletes the old one.
+- A college with faculty cannot be deleted until they are moved or removed.
+- **Export CSV** downloads the full register, including private phone numbers and notes, as a spreadsheet.
+- Flag uncertain entries with **Needs review** to find them later with the filter.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Privacy
 
-## Deploy on Vercel
+Personal mobile numbers are masked on the public site (`SHOW_FULL_PHONE_PUBLICLY` in `lib/constants.ts`). Only signed-in admins see them in full.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploying (Vercel)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Add the variables above in the project settings.
+2. In MongoDB Atlas → Network Access, allow connections from Vercel (`0.0.0.0/0`, or Vercel's IP ranges). The build reads the database while prerendering.
+
+---
+
+Designed & developed by [Mosanna Jalal](https://me-mj.vercel.app).
