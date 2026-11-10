@@ -33,6 +33,7 @@ export interface FacultyDoc {
   sortName: string;
   designation: string;
   rank: number;
+  order?: number | null;
   isHead: boolean;
   additionalRole: string;
   collegeId: ObjectId;

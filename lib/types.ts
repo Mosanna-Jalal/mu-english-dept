@@ -46,6 +46,8 @@ export interface Faculty {
   sortName: string;
   designation: string;
   rank: number;
+  /** Manual position within the college (lower first); null = automatic (head, rank, name). */
+  order: number | null;
   isHead: boolean;
   additionalRole: string;
   collegeId: string;

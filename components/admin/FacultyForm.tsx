@@ -81,6 +81,9 @@ export function FacultyForm({ initial, colleges, defaultCollegeId = "" }: { init
               })}
             </select>
           </Field>
+          <Field label="Display order" hint="Position within the college: 1 = first. Blank = automatic" error={err("order")}>
+            <input name="order" defaultValue={initial?.order ?? ""} className="field" inputMode="numeric" placeholder="Automatic" aria-invalid={!!err("order")} />
+          </Field>
           <Field label="In service since" hint="YYYY, YYYY-MM or YYYY-MM-DD" error={err("joined")}>
             <input name="joined" defaultValue={initial?.joined} className="field" placeholder="2025-08-07" inputMode="numeric" aria-invalid={!!err("joined")} />
           </Field>

@@ -61,6 +61,7 @@ export async function saveFaculty(_prev: FormState, fd: FormData): Promise<FormS
   const parsed = facultySchema.safeParse({
     name: str(fd, "name"),
     designation: str(fd, "designation"),
+    order: str(fd, "order").trim(),
     isHead: fd.get("isHead") === "on",
     additionalRole: str(fd, "additionalRole"),
     collegeId: str(fd, "collegeId"),
@@ -117,6 +118,7 @@ export async function saveFaculty(_prev: FormState, fd: FormData): Promise<FormS
     sortName: plainName(data.name),
     designation: data.designation,
     rank: designationRank(data.designation),
+    order: data.order === "" ? null : data.order,
     isHead: data.isHead,
     additionalRole: data.additionalRole,
     collegeId: college._id,

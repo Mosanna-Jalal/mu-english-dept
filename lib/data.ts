@@ -45,6 +45,7 @@ export function toAdminFaculty(doc: FacultyDoc): AdminFaculty {
     sortName: doc.sortName,
     designation: doc.designation,
     rank: doc.rank ?? 5,
+    order: typeof doc.order === "number" ? doc.order : null,
     isHead: !!doc.isHead,
     additionalRole: doc.additionalRole ?? "",
     collegeId: doc.collegeId.toHexString(),
@@ -78,6 +79,7 @@ function toPublicFaculty(doc: FacultyDoc): Faculty {
     sortName: full.sortName,
     designation: full.designation,
     rank: full.rank,
+    order: full.order,
     isHead: full.isHead,
     additionalRole: full.additionalRole,
     collegeId: full.collegeId,
@@ -120,6 +122,7 @@ export async function getRegister(): Promise<Register> {
     .sort(
       (a, b) =>
         (order.get(a.collegeId) ?? 999) - (order.get(b.collegeId) ?? 999) ||
+        (a.order ?? 1000) - (b.order ?? 1000) ||
         Number(b.isHead) - Number(a.isHead) ||
         a.rank - b.rank ||
         a.sortName.localeCompare(b.sortName),

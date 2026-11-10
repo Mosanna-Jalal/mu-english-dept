@@ -14,6 +14,7 @@ export const sourceSchema = z.object({
 export const facultySchema = z.object({
   name: z.string().trim().min(3, "Enter the full name").max(120),
   designation: z.string().trim().min(2, "Choose a designation").max(80),
+  order: z.union([z.literal(""), z.coerce.number().int("Use a whole number").min(1, "Use 1 or more").max(999)]),
   isHead: z.boolean(),
   additionalRole: z.string().trim().max(120),
   collegeId: z.string().regex(/^[a-f0-9]{24}$/, "Choose an institution"),

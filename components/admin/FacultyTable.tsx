@@ -34,7 +34,13 @@ export function FacultyTable({ faculty, colleges }: { faculty: AdminFaculty[]; c
     });
     return list.sort((a, b) => {
       if (sort === "name") return a.sortName.localeCompare(b.sortName);
-      if (sort === "college") return (byId.get(a.collegeId)?.name ?? "").localeCompare(byId.get(b.collegeId)?.name ?? "") || a.rank - b.rank;
+      if (sort === "college")
+        return (
+          (byId.get(a.collegeId)?.name ?? "").localeCompare(byId.get(b.collegeId)?.name ?? "") ||
+          (a.order ?? 1000) - (b.order ?? 1000) ||
+          Number(b.isHead) - Number(a.isHead) ||
+          a.rank - b.rank
+        );
       return b.updatedAt.localeCompare(a.updatedAt);
     });
   }, [faculty, q, quick, college, sort, byId]);

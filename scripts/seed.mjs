@@ -1,11 +1,13 @@
 // Seeds MongoDB + Cloudinary from data/seed/{colleges,faculty}.json and data/seed/photos/.
 // Idempotent: records are upserted by slug, and existing photos are kept unless --photos is passed.
 // Records edited in the admin panel since they were last seeded are left untouched (use --force
-// to overwrite them anyway). Colleges marked "retired" are removed if no faculty belong to them.
+// to overwrite them anyway). Colleges marked "retired" are removed if no faculty belong to them;
+// faculty marked "retired" are removed together with their Cloudinary photo.
 //
-//   node scripts/seed.mjs            # insert / update records, upload missing photos
-//   node scripts/seed.mjs --photos   # also re-upload every photo
-//   node scripts/seed.mjs --force    # also overwrite records edited in the admin panel
+//   node scripts/seed.mjs                    # insert / update records, upload missing photos
+//   node scripts/seed.mjs --photos           # also re-upload every photo
+//   node scripts/seed.mjs --photos=slug,slug # re-upload just these people's photos (after replacing the files)
+//   node scripts/seed.mjs --force            # also overwrite records edited in the admin panel
 import fs from "node:fs";
 import path from "node:path";
 import { MongoClient } from "mongodb";
@@ -15,7 +17,9 @@ import { designationRank } from "../lib/constants.ts";
 
 const root = path.resolve(import.meta.dirname, "..");
 const seedDir = path.join(root, "data", "seed");
-const forcePhotos = process.argv.includes("--photos");
+const photosArg = process.argv.find((a) => a === "--photos" || a.startsWith("--photos="));
+const forceAllPhotos = photosArg === "--photos";
+const forcePhotoSlugs = new Set(photosArg?.startsWith("--photos=") ? photosArg.slice("--photos=".length).split(",").map((s) => s.trim()).filter(Boolean) : []);
 const force = process.argv.includes("--force");
 // Edited in the admin panel after the last seed? (Admin saves bump updatedAt past seededAt.)
 const editedByAdmin = (doc) => !force && doc && doc.seededAt && doc.updatedAt > new Date(doc.seededAt.getTime() + 2000);
@@ -75,17 +79,26 @@ for (const c of colleges) {
 console.log(`colleges: ${colleges.length - retired} upserted, ${keptColleges} kept (edited in admin), ${retired} duplicate(s) retired`);
 
 let serial = (await Faculty.find().sort({ serial: -1 }).limit(1).toArray())[0]?.serial ?? 0;
-let uploaded = 0, keptFaculty = 0;
+let uploaded = 0, keptFaculty = 0, retiredFaculty = 0;
 for (const f of faculty) {
   const existing = await Faculty.findOne({ slug: f.slug });
+  if (f.retired) {
+    // No longer in service: remove the record and its photo, as the admin panel's delete does.
+    if (existing) {
+      if (existing.photo?.publicId) await cloudinary.uploader.destroy(existing.photo.publicId, { invalidate: true, resource_type: "image" });
+      await Faculty.deleteOne({ _id: existing._id });
+      retiredFaculty++;
+      process.stdout.write(`  ${f.slug} (removed: retired)\n`);
+    }
+    continue;
+  }
   if (editedByAdmin(existing)) {
     keptFaculty++;
-    process.stdout.write(`  ${f.slug} (kept: edited in admin)
-`);
+    process.stdout.write(`  ${f.slug} (kept: edited in admin)\n`);
     continue;
   }
   let photo = existing?.photo ?? null;
-  if (f.photo && (forcePhotos || !photo)) {
+  if (f.photo && (forceAllPhotos || forcePhotoSlugs.has(f.slug) || !photo)) {
     const file = path.join(seedDir, "photos", f.photo);
     const res = await cloudinary.uploader.upload(file, {
       folder: CLOUDINARY_FOLDER,
@@ -95,6 +108,10 @@ for (const f of faculty) {
       resource_type: "image",
       transformation: [{ width: 1600, height: 1600, crop: "limit" }],
     });
+    // A photo uploaded earlier under a different id (e.g. from the admin panel) would be orphaned.
+    if (existing?.photo?.publicId && existing.photo.publicId !== res.public_id) {
+      await cloudinary.uploader.destroy(existing.photo.publicId, { invalidate: true, resource_type: "image" });
+    }
     photo = { publicId: res.public_id, version: res.version, width: res.width, height: res.height, url: res.secure_url };
     uploaded++;
   }
@@ -103,6 +120,7 @@ for (const f of faculty) {
     sortName: plainName(f.name),
     designation: f.designation,
     rank: designationRank(f.designation),
+    order: typeof f.order === "number" ? f.order : null,
     isHead: !!f.isHead,
     additionalRole: f.additionalRole ?? "",
     collegeId: collegeIds.get(f.college),
@@ -128,6 +146,6 @@ for (const f of faculty) {
   );
   process.stdout.write(`  ${f.slug}${f.photo ? (photo ? " ✓ photo" : "") : " (no photo)"}\n`);
 }
-console.log(`faculty: ${faculty.length - keptFaculty} upserted, ${keptFaculty} kept (edited in admin), ${uploaded} photos uploaded to Cloudinary`);
+console.log(`faculty: ${faculty.length - keptFaculty - faculty.filter((x) => x.retired).length} upserted, ${keptFaculty} kept (edited in admin), ${retiredFaculty} retired, ${uploaded} photos uploaded to Cloudinary`);
 console.log(`totals in ${DB_NAME}: ${await Colleges.countDocuments()} colleges, ${await Faculty.countDocuments()} faculty`);
 await client.close();

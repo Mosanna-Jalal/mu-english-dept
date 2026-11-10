@@ -17,7 +17,7 @@ export async function GET() {
   const { faculty, colleges } = await getAdminRegister();
   const byId = new Map(colleges.map((c) => [c.id, c]));
   const header = [
-    "Catalogue No.", "Name", "Designation", "Head of Dept", "Additional role", "Institution", "Short name", "Category", "Location", "District",
+    "Catalogue No.", "Name", "Designation", "Head of Dept", "Display order", "Additional role", "Institution", "Short name", "Category", "Location", "District",
     "Qualifications", "Areas of interest", "Profile", "Highlights & publications", "Email", "Phone", "In service since", "Appointment", "Photo URL", "Needs review", "Notes", "Sources", "Last edited",
   ];
   const lines = faculty
@@ -26,7 +26,7 @@ export async function GET() {
     .map((p) => {
       const c = byId.get(p.collegeId);
       return [
-        catalogueNo(p.serial), p.name, p.designation, p.isHead ? "Yes" : "", p.additionalRole, c?.name, c?.shortName, c ? typeLabel(c.type) : "", c?.location, c?.district,
+        catalogueNo(p.serial), p.name, p.designation, p.isHead ? "Yes" : "", p.order ?? "", p.additionalRole, c?.name, c?.shortName, c ? typeLabel(c.type) : "", c?.location, c?.district,
         p.qualification, p.specialization.join("; "), p.bio, p.highlights.join(" | "), p.email, p.phone, p.joined, p.appointment, p.photo?.url ?? "", p.review ? "Yes" : "", p.notes,
         p.sources.map((s) => (s.url ? `${s.label} (${s.url})` : s.label)).join("; "), p.updatedAt.slice(0, 10),
       ]

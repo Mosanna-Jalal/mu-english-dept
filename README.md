@@ -26,9 +26,10 @@ Copy `.env.example` to `.env.local` and fill it in:
 ## Data
 
 - Collections: `colleges` and `faculty` in `english_faculty_database`.
-- `npm run seed` loads `data/seed/colleges.json` and `data/seed/faculty.json`, uploads `data/seed/photos/*` to Cloudinary and upserts by slug, so it is safe to re-run. **Records edited in the admin panel since the last seed are never overwritten** (pass `-- --force` to override). Pass `-- --photos` to force re-uploading the photos. `data/seed/` is gitignored because it holds personal phone numbers.
+- `npm run seed` loads `data/seed/colleges.json` and `data/seed/faculty.json`, uploads `data/seed/photos/*` to Cloudinary and upserts by slug, so it is safe to re-run. **Records edited in the admin panel since the last seed are never overwritten** (pass `-- --force` to override). Pass `-- --photos` to force re-uploading every photo, or `-- --photos=slug,slug` to re-upload just those people's photos after replacing their files. Faculty marked `"retired": true` in the seed data are removed together with their Cloudinary photo. `data/seed/` is gitignored because it holds personal phone numbers.
 - Colleges come from Magadh University's website plus its 2026–30 UG admissions system, which also supplies each college's official code and B.A. English seats (`englishSeats`).
 - Faculty records can carry a public `bio` and a list of `highlights` (distinctions, research record, selected publications).
+- Within each college, faculty are listed by their `order` (Display order in the admin form; 1 = first). Anyone without one follows, sorted by head of department, then seniority, then name.
 - Public pages read through one cached function (`lib/data.ts → getRegister`). Every admin save or delete calls `updateTag("register")`, so changes appear on the site immediately. Edits made directly in MongoDB Compass show up within an hour.
 
 ## Admin panel (`/admin`)
